@@ -1,0 +1,18 @@
+version: "3.7"
+
+services:
+  #Bootstrap Container
+  bootstrap:
+    build:
+      dockerfile: Dockerfile
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '8005:80'
+    volumes:
+      - '..:/var/www/html'
+    networks:
+      - sail
+networks:
+  sail:
+    driver: bridge
