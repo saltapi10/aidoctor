@@ -1,18 +1,15 @@
-# chat_model.py
-
-import torch
-import transformers
-
+from flask import Flask, request, jsonify
 from transformers import pipeline
-import sys
 
-# Load the model
+app = Flask(__name__)
 model = pipeline("text-generation", model="EleutherAI/gpt-neo-125M")
 
-def generate_response(prompt):
-    response = model(prompt, max_length=50, num_return_sequences=1)
-    return response[0]['generated_text']
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+    prompt = data.get('message', '')
+    response = model(prompt, max_length=50)[0]['generated_text']
+    return jsonify({'response': response})
 
-if __name__ == "__main__":
-    prompt = sys.argv[1]
-    print(generate_response(prompt))
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

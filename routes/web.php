@@ -15,15 +15,23 @@ use App\Http\Controllers\ChatController;
 |
 */
 
+Route::get('/chat-test', [ChatController::class, 'test']);
+
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::any('/ask-ai-doc',
-    [AskDocController::class, 'askDoc'])->name('askDoc');
-
-Route::post('/chat', [ChatController::class, 'chat']);
+//Route::any('/ask-ai-doc',
+//    [AskDocController::class, 'askDoc'])->name('askDoc');
 
 Route::get('/token', function () {
     return csrf_token();
 });
+
+Route::get('/chat', [ChatController::class, 'chat']);
+//Route::post('/chat-answer', [ChatController::class, 'chatAnswer']);
+Route::post('/chat-answer-lara', [ChatController::class, 'chatGemini']);
+
+//Route::get('/chat-gemini', [ChatController::class, 'chatGemini']);
+
+
