@@ -42,7 +42,7 @@
         <label for="file">Choose medical report (PDF, DOCX, TXT):</label>
         <form enctype="multipart/form-data">
             <input type="file" name="file" id="file">
-            <input type="text" id="message" name="message" placeholder="Enter message..." autocomplete="off">
+            <input type="text" id="message" name="message" placeholder="Enter message..." autocomplete="off" required>
             <button type="submit"></button>
         </form>
     </div>

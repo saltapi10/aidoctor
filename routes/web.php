@@ -29,8 +29,8 @@ Route::get('/token', function () {
 });
 
 Route::get('/chat', [ChatController::class, 'chat']);
-//Route::post('/chat-answer', [ChatController::class, 'chatAnswer']);
-Route::post('/chat-answer-lara', [ChatController::class, 'chatGemini']);
+
+Route::post('/chat-answer-lara', [ChatController::class, 'chatAnswer']);
 
 //Route::get('/chat-gemini', [ChatController::class, 'chatGemini']);
 

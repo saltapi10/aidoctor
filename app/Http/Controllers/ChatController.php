@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage; // Laravel storage helper
 use GuzzleHttp\Client; // Guzzle HTTP client for cURL replacement
 use GuzzleHttp\Exception\RequestException; // Guzzle exception handling
 use GeminiAPI\Laravel\Facades\Gemini;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Session;
 
 class ChatController extends Controller {
 
@@ -81,12 +81,22 @@ class ChatController extends Controller {
 
     public function chat() {
 
-        $this->chat = Gemini::startChat();
+        Session::forget('chatHistory');
+
+        //$prompt = 'Describe the file if it is provided and give medical explanation about it or else answer medical question.Disclaimer it is only for research purposes.';
+        $prompt = 'Answer medical questions.Disclaimer it is only for research purposes.';
+
+        session::put('chatHistory', [
+            'role' => 'user',
+            'parts' => [
+                ['text' => $prompt],
+            ],
+        ]);
 
         return view('chat');
     }
 
-    public function chatGemini(Request $request){
+    public function chatGeminiModule(Request $request){
         // Validate the file upload
         if (!$request->hasFile('file')) {
             return response()->json(['error' => 'No file uploaded'], 400);
@@ -158,239 +168,89 @@ class ChatController extends Controller {
         return $result;
     }
 
-    public function chatAnswerText(Request $request)
-    {
-
-        $apiKey = 'AIzaSyA-kUc9rDblZ_IH9lhmHa2vbRlyHvHRm0c'; // Replace with your actual API key
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' . $apiKey;
-
-        $data = [
-            'contents' => [
-                [
-                    'parts' => [
-                        [
-                            'text' => $request->get('content'),
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        $jsonData = json_encode($data);
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
-        ]);
-
-        $response = curl_exec($ch);
-
-        $curlError = curl_error($ch);
-
-        curl_close($ch);
-
-        if ($curlError) {
-            $return =  "Error: " . $curlError;
-        } else {
-            $responseData = json_decode($response, true);
-            // Process the response data here
-            //print_r($responseData);
-
-            $return = $responseData['candidates'][0]['content']['parts'][0]['text'];
-        }
-
-        return $return;
-    }
-
     public function chatAnswer(Request $request)
-    {
-        $apiKey = 'AIzaSyA-kUc9rDblZ_IH9lhmHa2vbRlyHvHRm0c'; // Replace with your actual API key
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' . $apiKey;
-
-        $file = $request->file('file');
-        $message = $request->file('message');
-
-        //File Name
-        //echo $file->getClientOriginalName();
-
-        //Display File Extension
-        //echo $file->getClientOriginalExtension();
-
-        //Display File Real Path
-        //echo $file->getRealPath();
-
-        //Display File Size
-        //echo $file->getSize();
-
-        //Display File Mime Type
-        //echo $file->getMimeType();
-
-        //$handle = fopen($file["tmp_name"], 'r');
-
-        $file_tmp = $file->getPathName();
-        $file_name = $file->getClientOriginalName();
-        $file_type = $file->getMimeType();
-
-        // Calculate file size
-        $numBytes = $file->getSize();
-
-        // Initial upload request
-        $ch = curl_init('http:localhost:8005' . '/upload/v1beta/files?key=' . $apiKey);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'X-Goog-Upload-Protocol: resumable',
-            'X-Goog-Upload-Command: start',
-            'X-Goog-Upload-Header-Content-Length: ' . $numBytes,
-            'X-Goog-Upload-Header-Content-Type: '.$file_type,
-            'Content-Type: application/json',
-        ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['file' => ['display_name' => $file_name]]));
-        $response = curl_exec($ch);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            echo "Error during upload initiation: " . $curlError;
-            exit;
-        }
-
-        // Extract upload URL from response headers
-        $tmpHeaderFile = 'upload-header.tmp';
-        file_put_contents($tmpHeaderFile, $response);
-        $uploadUrl = preg_match('/x-goog-upload-url: (.*)/i', file_get_contents($tmpHeaderFile), $matches) ? $matches[1] : null;
-        unlink($tmpHeaderFile);
-
-        if (!$uploadUrl) {
-            echo "Failed to extract upload URL from response.";
-            exit;
-        }
-
-        // Upload the file
-        $ch = curl_init($uploadUrl);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Length:
-        ' . $numBytes,
-            'X-Goog-Upload-Offset: 0',
-            'X-Goog-Upload-Command: upload, finalize',
-        ]);
-        curl_setopt($ch, CURLOPT_INFILE, fopen($file, 'rb'));
-        curl_setopt($ch, CURLOPT_INFILESIZE, $numBytes);
-        $response = curl_exec($ch);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            echo "Error during file upload: " . $curlError;
-            exit;
-        }
-
-        // Process upload response
-        $fileInfo = json_decode($response, true);
-        if (!$fileInfo) {
-            echo "Failed to decode upload response.";
-            exit;
-        }
-
-        $fileUri = $fileInfo['file']['uri'];
-        echo "File URI: " . $fileUri . PHP_EOL;
-
-        $data = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $message],
-                        ['file_data' => ['mime_type' => $file->getMimeType(), 'file_uri' => $fileUri]],
-                    ],
-                ],
-            ],
-        ];
-
-        $jsonData = json_encode($data);
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
-        ]);
-
-        $response = curl_exec($ch);
-
-        $curlError = curl_error($ch);
-
-        curl_close($ch);
-
-        if ($curlError) {
-            $return =  "Error: " . $curlError;
-        } else {
-            $responseData = json_decode($response, true);
-            // Process the response data here
-            //print_r($responseData);
-
-            $return = $responseData['candidates'][0]['content']['parts'][0]['text'];
-        }
-
-        return $return;
-    }
-
-    public function uploadFile(Request $request)
     {
         $apiKey = 'AIzaSyA-kUc9rDblZ_IH9lhmHa2vbRlyHvHRm0c'; // Replace with your actual API key
         // Validate the file upload
         if (!$request->hasFile('file')) {
-            return response()->json(['error' => 'No file uploaded'], 400);
+            //return response()->json(['error' => 'No file uploaded'], 400);
         }
 
         $file = $request->file('file');
         $message = $request->get('message');
 
-
-
         // Validate file upload
         if (!$file) {
-            return response()->json(['error' => 'No file uploaded'], 400);
+            //return response()->json(['error' => 'No file uploaded'], 400);
         }
 
-        // Get file information
-        $mimeType = $file->getMimeType();
-        $numBytes = $file->getSize();
-        $displayName = $file->getClientOriginalName(); // Use original filename
+        if ($file) {
+            // Get file information
+            $mimeType = $file->getMimeType();
+            $numBytes = $file->getSize();
+            $displayName = $file->getClientOriginalName(); // Use original filename
 
-        // Upload the file to Laravel storage (optional, adjust path as needed)
-        $storedPath = Storage::disk('public')->put('uploads', $file);
+            // Upload the file to Laravel storage (optional, adjust path as needed)
+            $storedPath = Storage::disk('public')->put('uploads', $file);
 
-        // Prepare content generation request data
-        //$fileUri = Storage::disk('public')->url($storedPath); // Get URL from storage
+            // Prepare content generation request data
+            $fileUri = storage_path() . '/app/public/' . $storedPath;
 
-        //$fileUri = storage_path() . '/app/public/uploads/3vvdTGz3PPmwdpf14b40hZ8f1Yw2IyB842CNW0B8.jpg';
+            $fileData = base64_encode(file_get_contents($fileUri));
 
-        //echo storage_path() . '/app/public/' . $storedPath;exit;
+            //$prompt = 'Describe the file if it is provided and give medical explanation/diagnosis about it or else answer medical question.Disclaimer it is only for research purposes.';
 
-        $fileUri = storage_path() . '/app/public/' . $storedPath;
-
-        $content = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $message],
-                        ['file_data' => ['mime_type' => $mimeType, 'file_uri' => $fileUri]],
+            $content = [
+                'contents' => [
+                    Session::get('chatHistory') ?? [],
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            ['text' => $message],
+                            ['inlineData' => [
+                                'mimeType' => $mimeType,
+                                'data' => $fileData,
+                            ]],
+                        ],
                     ],
                 ],
-            ],
-        ];
+            ];
+
+            $userHistory = [
+                'role' => 'user',
+                'parts' => [
+                    ['text' => $message],
+                    ['inlineData' => [
+                        'mimeType' => $mimeType,
+                        'data' => $fileData,
+                    ]],
+                ],
+            ];
+
+        }else{
+            $content = [
+                'contents' => [
+                    Session::get('chatHistory') ?? [],
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            ['text' => $message],
+                        ],
+                    ],
+                ],
+            ];
+
+            $userHistory = [
+                'role' => 'user',
+                'parts' => [
+                    ['text' => $message],
+                ],
+            ];
+        }
 
         // Perform content generation request with Guzzle (avoid external cURL calls)
         $client = new Client();
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey;
+        $url = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' . $apiKey;
 
         try {
             $response = $client->post($url, [
@@ -417,16 +277,26 @@ class ChatController extends Controller {
             }
         }
 
-        return response()->json(['success' => true, 'generated_text' => $generatedText]);
+        $inHistory = [
+            $userHistory ?? [],
+            [
+                'role' => 'model',
+                'parts' => [
+                    'text' => $generatedText
+                ]
+            ],
+        ];
 
-        //storage_path() . '/app/public/uploads/3vvdTGz3PPmwdpf14b40hZ8f1Yw2IyB842CNW0B8.jpg',
+        Session::put('chatHistory', $inHistory);
 
+        $generatedText = str_replace("*", "<br>", $generatedText);
 
-//        print Gemini::generateTextUsingImageFile(
-//            $file->getMimeType(),
-//            $fileUri,
-//            'Explain what is in the image',
-//        );
+        if ($file) {
+            //remove junk
+            unlink(storage_path() . '/app/public/' . $storedPath);
+        }
+
+        return $generatedText;
 
     }
 
