@@ -19,4 +19,8 @@ return [
      */
     'base_url' => env('GEMINI_BASE_URL'),
     //'model_name' => env('GEMINI_BASE_URL'),
+
+    'hotmail_api_key' => env('hotmail_api_key'),
+    'gmail_user_api_key' => env('gmail_user_api_key'),
+    'gmail_project_api_key' => env('gmail_project_api_key'),
 ];

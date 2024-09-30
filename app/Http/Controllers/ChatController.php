@@ -170,7 +170,7 @@ class ChatController extends Controller {
 
     public function chatAnswer(Request $request)
     {
-        $apiKey = 'AIzaSyA-kUc9rDblZ_IH9lhmHa2vbRlyHvHRm0c'; // Replace with your actual API key
+        $apiKey = config('api_key'); // Replace with your actual API key
         // Validate the file upload
         if (!$request->hasFile('file')) {
             //return response()->json(['error' => 'No file uploaded'], 400);

@@ -61,10 +61,9 @@ class AskDocController extends Controller
 
     // Function to send content to GPT model
     function analyzeWithGPT($text) {
-        $hotmail_api_key = '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'; // Replace with your actual API key
-        $gmail_user_api_key = 'sk-tALqJYYwnZI5G2n2-4LK-KQGJu6xaNcVk1sC86WOW7T3BlbkFJdeu36blba9XbaG9Y0XRgcgLSQxMY34y972V8wmUFUA'; // Replace with your actual API key
-        $gmail_project_api_key = 'sk-svcacct-bVZ2LFPPe7EqLvLJK4bDMO-US7QGoY-PaYN4l5WeEDFEDjjkGA4MKQ1ntLsc9s8rgPGB7kFFDRkBtVlQYKT3BlbkFJPakCGClTVgm2O1LEL2bw6B1T0SOl6BSRQwkw7zvEPqnHNEQb9S3I57glJOHfgWEeNoCCMJI5zpT-uhrskA'; // Replace with your actual API key
         $endpoint = 'https://api.openai.com/v1/chat/completions';  // Make sure this is the correct endpoint
+
+        $gmail_project_api_key = config('gmail_project_api_key');
 
         $data = [
             'model' => 'gpt-4o-mini', // Replace with the correct model, e.g., 'gpt-4'
