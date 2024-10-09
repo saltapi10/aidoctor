@@ -170,7 +170,7 @@ class ChatController extends Controller {
 
     public function chatAnswer(Request $request)
     {
-        $apiKey = config('api_key'); // Replace with your actual API key
+        $apiKey = env('GEMINI_API_KEY'); // Replace with your actual API key
         // Validate the file upload
         if (!$request->hasFile('file')) {
             //return response()->json(['error' => 'No file uploaded'], 400);
